@@ -9,13 +9,13 @@ import (
 )
 
 const (
-	MAX_CUSTOMERS	= 12
-	MAX_SEATS	= 5
+	MAX_CUSTOMERS	= 12	// one thread per customer
+	MAX_SEATS	= 6	// 5 waiting chairs + 1 barber chair
 )
 
 type Barber struct {
-	Cut		chan int
-	Done		chan bool
+	Cut		chan int	// customer id intake - buffered
+	Done		chan bool	// telemetry
 }
 
 func (b *Barber) Init() {
@@ -25,7 +25,9 @@ func (b *Barber) Init() {
 
 func (b *Barber) Run() {
 	for {
+		// barber sleeps here until a customer sends their id
 		x := <-b.Cut
+		// if input is 0 we are done processing customers
 		if x != 0 {
 			fmt.Printf("Barber is cutting hair for customer %d.\n", x)
 			b.CutHair()
@@ -38,18 +40,19 @@ func (b *Barber) Run() {
 
 func (b *Barber) CutHair() {
 	rand.Seed(time.Now().UnixNano())
-	seed := rand.Intn(45) + 5
-	duration, err := time.ParseDuration(fmt.Sprintf("%dms", seed * 10))
+	seed := rand.Intn(45) + 5	// random value between 5 and 50
+	duration, err := time.ParseDuration(fmt.Sprintf("%dms", seed * 10)) // 5 - 500 ms sleep time
 	if err != nil {
+		// no known reason to encounter this
 		log.Fatal(err)
 	}
 	time.Sleep(duration)
 }
 
 type Customer struct {
-	Id		int
-	Channel		chan int
-	WaitGroup	*sync.WaitGroup
+	Id		int		// id number
+	Channel		chan int	// Barber.Cut buffered MAX_SEATS
+	WaitGroup	*sync.WaitGroup	// sync group
 }
 
 func (c *Customer) New(id int, ch chan int, wg *sync.WaitGroup) {
@@ -58,6 +61,12 @@ func (c *Customer) New(id int, ch chan int, wg *sync.WaitGroup) {
 	c.WaitGroup = wg
 }
 
+/*
+ * Customer.GetHaircut uses a timeout of 1 second
+ * to determine whether a customer gets a spot
+ * in the barber's queue. Customers who encounter
+ * the timeout will balk.
+ */
 func (c *Customer) GetHaircut() {
 	defer c.WaitGroup.Done()
 	select {
@@ -85,8 +94,8 @@ func main() {
 		}()
 	}
 
-	wg.Wait()
-	close(b.Cut)
-	<-b.Done
+	wg.Wait()	// sync Customer threads
+	close(b.Cut)	// close buffered channel
+	<-b.Done	// sync Barber thread
 	fmt.Println("The barbershop is now closed.")
 }
