@@ -29,7 +29,7 @@ func (b *Barber) Run() {
 	for {
 		// barber sleeps here until a customer sends their id
 		x, more := <-b.Cut
-		// if input is 0 we are done processing customers
+		// if input is 0 we do not have a valid customer id
 		if x != 0 {
 			fmt.Printf("Barber is cutting hair for customer %d.\n", x)
 			b.CutHair()
@@ -43,7 +43,7 @@ func (b *Barber) Run() {
 
 func (b *Barber) CutHair() {
 	rand.Seed(time.Now().UnixNano())
-	seed := rand.Intn(BARBER_MAX) + 5	// random value between 5 and 50
+	seed := rand.Intn(BARBER_MAX) + 5	// random value between 5 and BARBER_MAX
 	if seed > BARBER_MAX {
 		seed = BARBER_MAX
 	}
@@ -52,7 +52,7 @@ func (b *Barber) CutHair() {
 		// no known reason to encounter this
 		log.Fatal(err)
 	}
-	time.Sleep(duration)	// 5 >= duration(millisecond) < (BARBER_MAX * 10)
+	time.Sleep(duration)	// 5ms >= duration < (BARBER_MAX * 10) ms
 }
 
 type Customer struct {
@@ -68,10 +68,9 @@ func (c *Customer) New(id int, ch chan int, wg *sync.WaitGroup) {
 }
 
 /*
- * Customer.GetHaircut uses a timeout of 1 second
- * to determine whether a customer gets a spot
- * in the barber's queue. Customers who encounter
- * the timeout will balk.
+ * Customer.GetHaircut uses a timeout of CUSTOMER_WAIT seconds to
+ * determine whether a customer gets a spot in the barber's queue.
+ * Customers who encounter the timeout will balk.
  */
 func (c *Customer) GetHaircut() {
 	defer c.WaitGroup.Done()
