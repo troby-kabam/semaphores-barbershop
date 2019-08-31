@@ -11,6 +11,8 @@ import (
 const (
 	MAX_CUSTOMERS	= 12	// one thread per customer
 	MAX_SEATS	= 6	// 5 waiting chairs + 1 barber chair
+	BARBER_MAX	= 50    // (BARBER_MAX * 10) millisecond sleep time
+	CUSTOMER_WAIT	= 1	// wait time in seconds to find a seat
 )
 
 type Barber struct {
@@ -41,13 +43,16 @@ func (b *Barber) Run() {
 
 func (b *Barber) CutHair() {
 	rand.Seed(time.Now().UnixNano())
-	seed := rand.Intn(45) + 5	// random value between 5 and 50
-	duration, err := time.ParseDuration(fmt.Sprintf("%dms", seed * 10)) // 5 - 500 ms sleep time
+	seed := rand.Intn(BARBER_MAX) + 5	// random value between 5 and 50
+	if seed > BARBER_MAX {
+		seed = BARBER_MAX
+	}
+	duration, err := time.ParseDuration(fmt.Sprintf("%dms", seed * 10)) // millisecond sleep time
 	if err != nil {
 		// no known reason to encounter this
 		log.Fatal(err)
 	}
-	time.Sleep(duration)
+	time.Sleep(duration)	// 5 >= duration(millisecond) < (BARBER_MAX * 10)
 }
 
 type Customer struct {
@@ -73,7 +78,7 @@ func (c *Customer) GetHaircut() {
 	select {
 	case c.Channel <- c.Id:
 		fmt.Printf("Customer %d has found a seat.\n", c.Id)
-	case <-time.After(1 * time.Second):
+	case <-time.After(CUSTOMER_WAIT * time.Second):
 		fmt.Printf("Customer %d balks!\n", c.Id)
 	}
 }
