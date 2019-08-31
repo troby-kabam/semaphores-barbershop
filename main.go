@@ -26,12 +26,13 @@ func (b *Barber) Init() {
 func (b *Barber) Run() {
 	for {
 		// barber sleeps here until a customer sends their id
-		x := <-b.Cut
+		x, more := <-b.Cut
 		// if input is 0 we are done processing customers
 		if x != 0 {
 			fmt.Printf("Barber is cutting hair for customer %d.\n", x)
 			b.CutHair()
-		} else {
+		}
+		if more == false {
 			b.Done <- true
 			return
 		}
