@@ -20,9 +20,11 @@ type Barber struct {
 	Done		chan bool	// telemetry
 }
 
-func (b *Barber) Init() {
+func NewBarber() *Barber {
+	b := new(Barber)
 	b.Cut		= make(chan int, MAX_SEATS)
 	b.Done		= make(chan bool)
+	return b
 }
 
 func (b *Barber) Run() {
@@ -61,10 +63,8 @@ type Customer struct {
 	WaitGroup	*sync.WaitGroup	// sync group
 }
 
-func (c *Customer) New(id int, ch chan int, wg *sync.WaitGroup) {
-	c.Id = id
-	c.Channel = ch
-	c.WaitGroup = wg
+func NewCustomer(id int, ch chan int, wg *sync.WaitGroup) *Customer {
+	return &Customer{id, ch, wg}
 }
 
 /*
@@ -83,17 +83,15 @@ func (c *Customer) GetHaircut() {
 }
 
 func main() {
-	b := new(Barber)
+	b := NewBarber()
 	wg := new(sync.WaitGroup)
 
-	b.Init()
 	fmt.Println("Barbershop is now open.")
 	go b.Run()
 	wg.Add(MAX_CUSTOMERS)
 	for i := 1; i <= MAX_CUSTOMERS; i++ {
 		fmt.Printf("Customer %d has entered.\n", i)
-		c := new(Customer)
-		c.New(i, b.Cut, wg)
+		c := NewCustomer(i, b.Cut, wg)
 		go func() {
 			c.GetHaircut()
 		}()
